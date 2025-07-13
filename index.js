@@ -26,6 +26,14 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    const parcelCollection = client.db("parcelDB").collection("parcels");
+
+    app.get("/parcels", async (req, res) => {
+      const parcels = await parcelCollection.find().toArray();
+      res.send(parcels);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
