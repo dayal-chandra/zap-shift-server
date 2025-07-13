@@ -34,6 +34,12 @@ async function run() {
       res.send(parcels);
     });
 
+    app.post("/parcels", async (req, res) => {
+      const newParcel = req.body;
+      const result = await parcelCollection.insertOne(newParcel);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
