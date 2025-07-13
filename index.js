@@ -34,6 +34,22 @@ async function run() {
       res.send(parcels);
     });
 
+    app.get("/parcels", async (req, res) => {
+      try {
+        const userEmail = req.query.email;
+        const query = userEmail ? { created_by: userEmail } : {};
+        const options = {
+          sort: { createdAt: -1 },
+        };
+
+        const parcels = await parcelCollection.find(query, options).toArray();
+        res.send(parcels);
+      } catch (error) {
+        console.error("Error fetching parcels:", error);
+        res.status(500).send({ message: "Failed to get parcel Data" });
+      }
+    });
+
     app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
