@@ -29,12 +29,40 @@ async function run() {
     await client.connect();
 
     const parcelCollection = client.db("parcelDB").collection("parcels");
+    const usersCollection = client.db("parcelDB").collection("users");
     const paymentsCollection = client.db("parcelDB").collection("payments");
+    const trackingCollection = client.db("parcelDB").collection("tracking");
 
-    app.get("/parcels", async (req, res) => {
-      const parcels = await parcelCollection.find().toArray();
-      res.send(parcels);
+    // Custom middleware
+    const verifyFBToken = async (req, res, next) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).send({ message: "unauthorized access." });
+      }
+      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return res.status(401).send({ message: "unauthorized access." });
+      }
+      next();
+    };
+
+    app.post("/users", async (req, res) => {
+      const email = req.body.email;
+      const usersExists = await usersCollection.findOne({ email });
+      if (usersExists) {
+        return res
+          .status(200)
+          .send({ message: "User already exists", inserted: false });
+      }
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
     });
+
+    // app.get("/parcels", async (req, res) => {
+    //   const parcels = await parcelCollection.find().toArray();
+    //   res.send(parcels);
+    // });
 
     app.get("/parcels", async (req, res) => {
       try {
@@ -103,7 +131,8 @@ async function run() {
       }
     });
 
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyFBToken, async (req, res) => {
+      console.log("Headers in payments", req.headers);
       try {
         const userEmail = req.query.email;
         const query = userEmail ? { email: userEmail } : {};
@@ -156,6 +185,28 @@ async function run() {
       } catch (error) {
         console.error("Payment processing failed");
       }
+    });
+
+    // Tracking API
+    app.post("/tracking", async (req, res) => {
+      const {
+        tracking_id,
+        parcel_id,
+        status,
+        message,
+        updated_by = "",
+      } = req.body;
+      const log = {
+        tracking_id,
+        parcel_id: parcel_id ? new ObjectId(parcel_id) : undefined,
+        status,
+        message,
+        time: new Date(),
+        updated_by,
+      };
+
+      const result = await trackingCollection.insertOne(log);
+      res.send({ success: true, insertedId: result.insertedId });
     });
 
     // Send a ping to confirm a successful connection
